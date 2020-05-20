@@ -41,16 +41,6 @@ int main(int argc, char** argv) {
     xp=30;
     yp=45;
     
-    struct stat sb;
-    if (!(stat("/tmp/robonitor", &sb) == 0 && S_ISDIR(sb.st_mode))){
-        const int dir_err = system("mkdir -p /tmp/robonitor");
-        if (dir_err == -1)
-            {
-                printf("Error creating directory!n");
-                exit(-1);
-            }
-        }
-        
     clock_t start_t, end_t;
     start_t = clock();
       
@@ -59,14 +49,7 @@ int main(int argc, char** argv) {
     
     compression_params.push_back(IMWRITE_JPEG_QUALITY);
     compression_params.push_back(90);
-        
-    Scalar lower_yellow = Scalar(24, 135, 93, 0);
-    Scalar upper_yellow= Scalar(42, 252, 255, 0);
-    Scalar lower_green = Scalar(54, 145, 16, 0);
-    Scalar upper_green= Scalar(100, 255, 128, 0);
     
-    VideoCapture cap(0);
-
     Mat frame,hsv_frame,mask,frame_gray,mask_grey,final_mask;
     int frames_nodetect=0;
     
@@ -77,12 +60,45 @@ int main(int argc, char** argv) {
     
     //Mat mask_grey(frame_height,frame_width);
     mask_grey = Mat::zeros(Size(frame_width,frame_height), CV_8UC1);
+        
+    /*
+     *      Directorio en el que se guarda la captura
+     */
+    struct stat sb;
+    if (!(stat("/tmp/robonitor", &sb) == 0 && S_ISDIR(sb.st_mode))){
+        const int dir_err = system("mkdir -p /tmp/robonitor");
+        if (dir_err == -1)
+            {
+                printf("Error creating directory!n");
+                exit(-1);
+            }
+        }
+
+    /*
+     *      Rango del color a detectar
+     */
+    Scalar lower_yellow = Scalar(24, 135, 93, 0);
+    Scalar upper_yellow= Scalar(42, 252, 255, 0);
+    Scalar lower_green = Scalar(54, 145, 16, 0);
+    Scalar upper_green= Scalar(100, 255, 128, 0);
     
+    
+    VideoCapture cap(0);
+    
+    /*
+     *      Haar-cascade Detection 
+     */
     CascadeClassifier body_classifier;
     body_classifier = CascadeClassifier("/home/pi/pedestrian-detection/haarcascade_upperbody.xml");
     
     while(1){
     	cap >> frame;
+        
+        /*
+         * Detección del color
+         * 
+         */
+        
     	cvtColor(frame, hsv_frame, COLOR_BGR2HSV);         //Cambio del espacio de color
     	inRange(hsv_frame,lower_green,upper_green,mask);    //Filtrado
         
@@ -101,13 +117,22 @@ int main(int argc, char** argv) {
             area=0;
         }
         
-        cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
-        resize(frame_gray, frame_gray,Size(),0.25,0.25,INTER_LINEAR);
+        cvtColor(frame, frame_gray, COLOR_BGR2GRAY);  // cambio a grises
+        resize(frame_gray, frame_gray,Size(),0.25,0.25,INTER_LINEAR); 
 
+        /*
+         * Deteccion de 
+         * upperbodies
+         * 
+         */
         
-        body_classifier.detectMultiScale( frame_gray, bodies, 1.05, 3 ); //bodies = body_classifier.detectMultiScale(gray, 1.2, 3)
+        body_classifier.detectMultiScale( frame_gray, bodies, 1.05, 3 ); 
         
-        if (frames_nodetect>9)mask_grey = Mat::zeros(Size(frame_width,frame_height), CV_8UC1);
+        
+        /*
+         * Prueba para utilizar las 9 ultimos frames en el que se ha detectado persona
+         */
+        if (frames_nodetect>9)mask_grey = Mat::zeros(Size(frame_width,frame_height), CV_8UC1); 
         if (bodies.size()>0){
             frames_nodetect=0;
             cout << "Vector size: "<< bodies.size() <<endl;
@@ -119,7 +144,10 @@ int main(int argc, char** argv) {
             }
         }else{frames_nodetect++;}
         
-        bitwise_and(mask, mask_grey, final_mask);
+        /*
+         * Interseccion de deteccion por color y reconocimiento
+         */
+        bitwise_and(mask, mask_grey, final_mask); //interseccion de deteccion por color y reconocimiento
         
 //        imshow( "Mask", mask_grey );
 //        if( waitKey(10) == 27 )
@@ -139,7 +167,10 @@ int main(int argc, char** argv) {
         
         end_t = clock();
         
-//        if ((double)(end_t - start_t) / CLOCKS_PER_SEC > 1.0){   // Guardar captura cada segundo
+        /*
+         * Guardar captura cada segundo
+         */
+//        if ((double)(end_t - start_t) / CLOCKS_PER_SEC > 1.0){  
 //            start_t = end_t;
 //            system("touch /tmp/robonitor/.lock");
 //            imwrite("/tmp/robonitor/cap.jpg", frame, compression_params);
