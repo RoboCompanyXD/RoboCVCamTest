@@ -31,13 +31,24 @@
 using namespace std;
 using namespace cv;
 
-int x,xp,y,yp,area,frame_width,frame_height,foto=0;
+int x,xp,y,yp,area,frame_width,frame_height,foto=0; // TODO explicar qué es cada variable por separado
+
 /*
- * 
+ * Esta clase configura la cámara con el patrón y el espacio de color.
+ * Una vez iniciada esta clase, el búcle principal empieza a ciclar y 
+ * con cada ciclo procesa el último fotograma disponible (no se procesan todos los fotogramas).
+ *
+ * TODO: documentar esta clase con un esquema/diagrama de secuencia
+ *       - Explicar de manera general cuál es el proceso para obtener la posición del torso.
+ *            1) Query last available fotogram 
+ *            2) Resize/scale the fotogram to reduce its pixel resolution, and therefore reduce computational cost
+ *            3) ...
+ *       - Explicar lo de la medición del tiempo
+ *       - Explicar cómo utilizar los resultados de esta clase fuera de ella
  */
 int main(int argc, char** argv) {
     
-    cout << "OpenCV version: "<< CV_VERSION << endl;
+    //cout << "OpenCV version: "<< CV_VERSION << endl;
     xp=30;
     yp=45;
     
